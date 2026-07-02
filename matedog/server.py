@@ -267,8 +267,12 @@ def file_qa(fid: int):
 
 
 @app.post("/api/files/{fid}/pretranslate")
-def pretranslate(fid: int):
-    """Fill empty segments from TM/MT, MateCat-style pre-translation."""
+def pretranslate(fid: int, min_percent: int = 50):
+    """Fill empty segments from TM/MT, MateCat-style pre-translation.
+
+    Suggestions below min_percent (e.g. rough lexicon glosses) are skipped;
+    they remain available per-segment in the suggestions panel.
+    """
     with get_db() as conn:
         f = conn.execute("SELECT * FROM files WHERE id=?", (fid,)).fetchone()
         if not f:
@@ -279,7 +283,7 @@ def pretranslate(fid: int):
                 "SELECT id, source FROM segments WHERE file_id=? AND state='new' "
                 "AND target=''", (fid,)).fetchall():
             sug = mt.suggest(conn, p["src_lang"], p["tgt_lang"], xliff.strip_tags(s["source"]))
-            if sug:
+            if sug and sug["percent"] >= min_percent:
                 conn.execute("UPDATE segments SET target=?, state='draft' WHERE id=?",
                              (sug["text"], s["id"]))
                 filled += 1
