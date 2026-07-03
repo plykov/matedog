@@ -1,0 +1,101 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: "Segoe UI", system-ui, sans-serif;
+  background: #f0f3f5; color: #222; font-size: 14px;
+}
+header {
+  background: #0099cc; color: #fff; padding: 10px 18px;
+  display: flex; align-items: center; gap: 16px;
+}
+.brand { font-size: 18px; font-weight: 600; cursor: pointer; }
+#header-info { opacity: .9; }
+
+.view { max-width: 1200px; margin: 18px auto; padding: 0 14px; }
+.card {
+  background: #fff; border-radius: 8px; padding: 16px 18px; margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+h2 { margin: 0 0 12px; font-size: 16px; }
+h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; color: #667; }
+
+.row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.row.spread { justify-content: space-between; }
+input, select, button, .btn {
+  font: inherit; padding: 7px 10px; border: 1px solid #ccd; border-radius: 5px;
+}
+input[type=file] { border: none; padding: 4px 0; }
+button, .btn {
+  background: #0099cc; border-color: #0099cc; color: #fff; cursor: pointer;
+  text-decoration: none; display: inline-block;
+}
+button:hover, .btn:hover { background: #007fab; }
+button.link { background: none; border: none; color: #0099cc; padding: 4px; }
+button.secondary { background: #eef2f4; color: #234; border-color: #ccd; }
+
+.tm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+.plist-item, .flist-item {
+  display: flex; align-items: center; gap: 12px; padding: 9px 6px;
+  border-bottom: 1px solid #eef;
+}
+.plist-item a, .flist-item a { color: #0077aa; font-weight: 600; cursor: pointer; text-decoration: none; }
+.badge {
+  background: #e8f4fa; color: #067; border-radius: 10px; padding: 2px 9px; font-size: 12px;
+}
+.progress {
+  flex: 0 0 140px; height: 8px; background: #e4e9ec; border-radius: 4px; overflow: hidden;
+}
+.progress > div { height: 100%; background: #43b02a; }
+.muted { color: #889; font-size: 12px; }
+.grow { flex: 1; }
+.del { color: #c33; cursor: pointer; background: none; border: none; }
+
+/* editor */
+.editor { max-width: 1400px; }
+.editor-toolbar {
+  display: flex; gap: 8px; align-items: center; background: #fff;
+  padding: 9px 12px; border-radius: 8px; margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08); flex-wrap: wrap;
+}
+.editor-body { display: flex; gap: 14px; align-items: flex-start; }
+.segments { flex: 1; min-width: 0; }
+#sidebar {
+  flex: 0 0 330px; position: sticky; top: 10px; display: flex;
+  flex-direction: column; gap: 12px; max-height: calc(100vh - 90px); overflow: auto;
+}
+#sidebar > div { background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+.seg {
+  display: grid; grid-template-columns: 44px 1fr 1fr 110px; gap: 10px;
+  background: #fff; border-radius: 7px; padding: 10px; margin-bottom: 8px;
+  border-left: 4px solid #ccd; box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+.seg.active { border-left-color: #0099cc; outline: 2px solid #bfe6f5; }
+.seg.state-translated { border-left-color: #43b02a; }
+.seg.state-approved { border-left-color: #1a7f37; }
+.seg.state-draft { border-left-color: #e6a700; }
+.seg.state-rejected { border-left-color: #cc3333; }
+.seg .num { color: #99a; font-size: 12px; padding-top: 6px; }
+.seg .src { white-space: pre-wrap; padding-top: 6px; line-height: 1.5; }
+.seg .src .tag, .match-src .tag { background: #ffe9b3; border-radius: 3px; padding: 0 3px; font-size: 12px; }
+.seg textarea {
+  width: 100%; min-height: 58px; resize: vertical; font: inherit; line-height: 1.5;
+  border: 1px solid #dde; border-radius: 5px; padding: 6px;
+}
+.seg .ops { display: flex; flex-direction: column; gap: 4px; }
+.seg .ops button { padding: 4px 6px; font-size: 12px; }
+.seg .qa-flags { grid-column: 2 / 5; }
+.issue { font-size: 12px; padding: 2px 0; }
+.issue.error { color: #c0392b; }
+.issue.warning { color: #b07d00; }
+
+.match { border-bottom: 1px solid #eef; padding: 8px 0; }
+.match .pct { font-weight: 700; color: #067; }
+.match .apply { float: right; font-size: 12px; padding: 2px 8px; }
+.match-src { color: #789; font-size: 12px; margin-top: 3px; }
+.term { display: inline-block; background: #eef6ee; border-radius: 4px; padding: 2px 7px; margin: 2px; font-size: 12px; }
+
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: #223; color: #fff; padding: 10px 18px; border-radius: 6px; z-index: 10;
+}

@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+
+# Optional: fully local neural MT for en<->ru and en<->nl.
+# pip install argostranslate
+# then install models: argospm install translate-en_ru translate-ru_en translate-en_nl translate-nl_en
