@@ -385,28 +385,62 @@ $("#project-form").onsubmit = (ev) => {
   showHome();
 };
 
+async function extractPdfText(file) {
+  if (typeof pdfjsLib === "undefined") {
+    throw new Error("PDF support not loaded (vendor/pdfjs missing)");
+  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "./vendor/pdfjs/pdf.worker.min.js";
+  const data = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    let text = "";
+    for (const item of content.items) {
+      text += item.str;
+      text += item.hasEOL ? "\n" : " ";
+    }
+    if (text.trim()) pages.push(text.trim());
+  }
+  const full = pages.join("\n\n");
+  if (!full.trim()) {
+    throw new Error("No extractable text — this looks like a scanned " +
+      "(image-only) PDF. Run OCR on it first.");
+  }
+  return full;
+}
+
 $("#upload-form").onsubmit = async (ev) => {
   ev.preventDefault();
   const file = $("#upload-file").files[0];
   if (!file) return;
-  let raw = await file.text();
   const name = file.name;
   const p = currentProject;
-  let kind, units;
+  let raw, kind, units;
   try {
     if (/\.(xlf|xliff)$/i.test(name)) {
       kind = "xliff";
+      raw = await file.text();
       units = Engine.parseXliff(raw).units;
-    } else if (/\.txt$/i.test(name)) {
-      kind = "txt";
-      const sources = Engine.segmentText(raw);
+    } else if (/\.(txt|pdf)$/i.test(name)) {
+      let text;
+      if (/\.pdf$/i.test(name)) {
+        kind = "pdf";
+        toast("Extracting PDF text…");
+        text = await extractPdfText(file);
+      } else {
+        kind = "txt";
+        text = await file.text();
+      }
+      const sources = Engine.segmentText(text);
       raw = Engine.makeXliffFromSegments(name, p.s, p.t, sources);
       units = Engine.parseXliff(raw).units;
     } else {
-      return toast("Only .xliff, .xlf and .txt files are supported");
+      return toast("Only .xliff, .xlf, .txt and .pdf files are supported");
     }
   } catch (e) {
-    return toast("Import failed: " + e.message);
+    return toast("Import failed: " + (e.message || e));
   }
   if (!units.length) return toast("No translatable segments found in file");
   const fid = Store.nextId();

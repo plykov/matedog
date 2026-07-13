@@ -39,7 +39,8 @@ machine. No cloud services, no data leaves your laptop.
 ## Web version (GitHub Pages / Android)
 
 The `docs/` folder contains a **fully client-side port** of the app — same
-engine (TM, XLIFF/TMX, paired-text learning, QA), no server at all. All data
+engine (TM, XLIFF/TMX, PDF import via a vendored pdf.js, paired-text
+learning, QA), no server at all. All data
 stays in the browser (IndexedDB); it works offline after the first load
 (service worker) and the UI is responsive for phone screens, so it runs in
 Chrome on an Android phone.

@@ -1,7 +1,8 @@
 // Minimal offline support: network-first, cache fallback for the app shell.
-const CACHE = "matedog-v1";
+const CACHE = "matedog-v2";
 const ASSETS = ["./", "./index.html", "./style.css", "./engine.js", "./store.js",
-                "./app.js", "./manifest.json"];
+                "./app.js", "./manifest.json",
+                "./vendor/pdfjs/pdf.min.js", "./vendor/pdfjs/pdf.worker.min.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
