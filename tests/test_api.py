@@ -125,6 +125,23 @@ def test_txt_upload(project):
     assert r.status_code == 200 and r.json()["segments"] == 2
 
 
+def test_pdf_upload(project):
+    from tests.pdf_fixture import make_pdf
+    pdf = make_pdf(["First pdf sentence.", "Second pdf sentence!"])
+    r = client.post(f"/api/projects/{project['id']}/files",
+                    files={"file": ("scan.pdf", pdf, "application/pdf")})
+    assert r.status_code == 200, r.text
+    assert r.json()["segments"] == 2
+    segs = client.get(f"/api/files/{r.json()['file_id']}/segments").json()
+    assert segs[0]["source"] == "First pdf sentence."
+
+
+def test_pdf_password_or_garbage_rejected(project):
+    r = client.post(f"/api/projects/{project['id']}/files",
+                    files={"file": ("bad.pdf", b"garbage", "application/pdf")})
+    assert r.status_code == 400
+
+
 def test_ui_served():
     r = client.get("/")
     assert r.status_code == 200 and "MateDog" in r.text

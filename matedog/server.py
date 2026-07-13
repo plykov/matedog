@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import SUPPORTED_PAIRS, __version__, norm_lang
-from . import db, mlx, mt, qa, tm, tmx, xliff
+from . import db, mlx, mt, pdfx, qa, tm, tmx, xliff
 from .segmenter import segment_text
 
 UI_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ui")
@@ -99,24 +99,33 @@ async def upload_file(pid: int, file: UploadFile = File(...)):
         p = conn.execute("SELECT * FROM projects WHERE id=?", (pid,)).fetchone()
         if not p:
             raise HTTPException(404, "Project not found")
-        raw = (await file.read()).decode("utf-8", errors="replace")
+        payload = await file.read()
         name = file.filename or "file"
         lower = name.lower()
 
         if lower.endswith((".xlf", ".xliff")):
             kind = "xliff"
+            raw = payload.decode("utf-8", errors="replace")
             try:
                 doc = xliff.parse_xliff(raw)
             except Exception as e:
                 raise HTTPException(400, f"Invalid XLIFF: {e}")
             units = doc.units
-        elif lower.endswith(".txt"):
-            kind = "txt"
-            sources = segment_text(raw)
+        elif lower.endswith((".txt", ".pdf")):
+            if lower.endswith(".pdf"):
+                kind = "pdf"
+                try:
+                    text = pdfx.extract_text(payload)
+                except ValueError as e:
+                    raise HTTPException(400, str(e))
+            else:
+                kind = "txt"
+                text = payload.decode("utf-8", errors="replace")
+            sources = segment_text(text)
             raw = xliff.make_xliff_from_segments(name, p["src_lang"], p["tgt_lang"], sources)
             units = xliff.parse_xliff(raw).units
         else:
-            raise HTTPException(400, "Only .xliff, .xlf and .txt files are supported. "
+            raise HTTPException(400, "Only .xliff, .xlf, .txt and .pdf files are supported. "
                                      "Convert other formats to XLIFF first.")
 
         if not units:

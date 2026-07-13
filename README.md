@@ -22,6 +22,9 @@ machine. No cloud services, no data leaves your laptop.
 - **XLIFF integration** — import XLIFF 1.2 and 2.0, translate, export a valid
   translated XLIFF with inline tags (`<g>`, `<x>`, `<ph>`, …) preserved.
   Plain `.txt` files are sentence-segmented and imported too.
+- **PDF import** — text is extracted from `.pdf` files (per page) and
+  sentence-segmented for translation; export the result as XLIFF or TXT.
+  Layout is not reproduced, and scanned (image-only) PDFs need OCR first.
 - **TMX integration** — import/export translation memories as TMX 1.4
   (region codes and reversed direction handled).
 - **Proofreading & editing** — segment editor with translate / approve / reject
