@@ -33,6 +33,24 @@ machine. No cloud services, no data leaves your laptop.
 - **Optional local neural MT** — install [Argos Translate](https://github.com/argosopentech/argos-translate)
   models for en↔ru / en↔nl and MateDog uses them automatically. Still 100% offline.
 
+## Web version (GitHub Pages / Android)
+
+The `docs/` folder contains a **fully client-side port** of the app — same
+engine (TM, XLIFF/TMX, paired-text learning, QA), no server at all. All data
+stays in the browser (IndexedDB); it works offline after the first load
+(service worker) and the UI is responsive for phone screens, so it runs in
+Chrome on an Android phone.
+
+Deploy: push the `claude/matedog-pages` branch — the included GitHub Actions
+workflow (`.github/workflows/pages.yml`) publishes `docs/` to GitHub Pages.
+If the first run fails with a Pages error, enable it once under
+**Settings → Pages → Source: GitHub Actions** and re-run. The app then lives
+at `https://<user>.github.io/<repo>/`.
+
+Notes vs. the desktop version: no Argos NMT and no LanguageTool in the
+browser — suggestions come from the TM and the learned lexicon. Use
+TMX export/import to move memories between the web and desktop versions.
+
 ## Quick start (Windows)
 
 1. Install [Python 3.11+](https://www.python.org/downloads/windows/)

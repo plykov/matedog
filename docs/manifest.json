@@ -1,0 +1,17 @@
+{
+  "name": "MateDog — local CAT tool",
+  "short_name": "MateDog",
+  "description": "Private CAT tool: translation memory, XLIFF/TMX, learning from paired texts, QA. All data stays in your browser.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f0f3f5",
+  "theme_color": "#0099cc",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230099cc'/><text x='50' y='72' font-size='60' text-anchor='middle'>🐶</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
