@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0099cc">
+<title>MateDog — local CAT tool</title>
+<link rel="stylesheet" href="./style.css">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐶</text></svg>">
+</head>
+<body>
+<header>
+  <div class="brand" id="brand">🐶 MateDog</div>
+  <div id="header-info"></div>
+</header>
+
+<main id="view-home" class="view">
+  <section class="card">
+    <h2>New project</h2>
+    <form id="project-form" class="row">
+      <input id="p-name" placeholder="Project name" required>
+      <select id="p-pair">
+        <option value="en:ru">English → Russian</option>
+        <option value="ru:en">Russian → English</option>
+        <option value="en:nl">English → Dutch</option>
+        <option value="nl:en">Dutch → English</option>
+      </select>
+      <button type="submit">Create</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Projects</h2>
+    <div id="project-list"></div>
+  </section>
+
+  <section class="card">
+    <h2>Translation memory &amp; learning</h2>
+    <div class="tm-grid">
+      <form id="tmx-form">
+        <h3>Import TMX</h3>
+        <div class="row"><select id="tmx-pair" class="pair-select"></select></div>
+        <div class="row"><input type="file" id="tmx-file" accept=".tmx,application/xml,text/xml" required></div>
+        <div class="row"><button type="submit">Import TMX</button></div>
+      </form>
+      <form id="pair-form">
+        <h3>Learn from paired texts</h3>
+        <div class="row"><select id="pair-pair" class="pair-select"></select></div>
+        <div class="row"><label>Source .txt <input type="file" id="pair-src" accept=".txt,text/plain" required></label></div>
+        <div class="row"><label>Target .txt <input type="file" id="pair-tgt" accept=".txt,text/plain" required></label></div>
+        <div class="row"><button type="submit">Align, add to TM &amp; train</button></div>
+      </form>
+      <div>
+        <h3>TM status</h3>
+        <div id="tm-stats"></div>
+        <div class="row">
+          <select id="export-pair" class="pair-select"></select>
+          <button id="tm-export-btn" type="button">Export TMX</button>
+          <button id="ml-train-btn" type="button">Retrain lexicon</button>
+        </div>
+      </div>
+      <form id="gloss-form">
+        <h3>Glossary</h3>
+        <div class="row"><select id="gloss-pair" class="pair-select"></select></div>
+        <div class="row">
+          <input id="gloss-src" placeholder="Source term" required>
+          <input id="gloss-tgt" placeholder="Target term" required>
+          <button type="submit">Add</button>
+        </div>
+      </form>
+    </div>
+    <p class="muted">All data stays in this browser (IndexedDB). Export your TM as TMX to back it up
+    or move it to the desktop version.</p>
+  </section>
+</main>
+
+<main id="view-project" class="view" hidden>
+  <section class="card">
+    <div class="row spread">
+      <h2 id="proj-title"></h2>
+      <button class="link" id="proj-back">← All projects</button>
+    </div>
+    <form id="upload-form" class="row">
+      <input type="file" id="upload-file" accept=".xliff,.xlf,.txt,.pdf,application/xml,text/plain,application/pdf" required>
+      <button type="submit">Upload file (XLIFF / TXT / PDF)</button>
+    </form>
+    <div id="file-list"></div>
+    <div id="analysis"></div>
+  </section>
+</main>
+
+<main id="view-editor" class="view editor" hidden>
+  <div class="editor-toolbar">
+    <button class="link" id="editor-back">← Project</button>
+    <span id="editor-file"></span>
+    <span id="editor-progress"></span>
+    <span class="grow"></span>
+    <input id="concord-q" placeholder="Concordance search…">
+    <button id="pretranslate-btn" title="Fill empty segments from TM/MT">Pre-translate</button>
+    <button id="qa-all-btn">QA check</button>
+    <button id="export-xliff">Export XLIFF</button>
+    <button id="export-txt">Export TXT</button>
+  </div>
+  <div class="editor-body">
+    <div id="segments" class="segments"></div>
+    <aside id="sidebar">
+      <div id="matches-panel"><h3>Suggestions</h3><div id="matches"></div></div>
+      <div id="qa-panel"><h3>QA</h3><div id="qa-issues"></div></div>
+      <div id="concord-panel" hidden><h3>Concordance</h3><div id="concord-results"></div></div>
+    </aside>
+  </div>
+</main>
+
+<div id="toast" hidden></div>
+<script src="./vendor/pdfjs/pdf.min.js"></script>
+<script src="./engine.js"></script>
+<script src="./store.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+name: Deploy MateDog web app to GitHub Pages
+
+# Manual-only: the repo currently uses branch-based Pages
+# (Settings -> Pages -> Deploy from a branch: claude/matedog-pages, /docs),
+# which deploys automatically on push. Run this workflow instead if the
+# Pages source is ever switched to "GitHub Actions".
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: enabled
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deployment
+        uses: actions/deploy-pages@v4
