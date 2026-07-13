@@ -303,15 +303,55 @@ const Engine = (() => {
 
   // ---------- TM ----------
   // TM units live in state.tm: {s, t, source, target, origin, use}
+  //
+  // Lookups go through an inverted token index (token -> units) with a
+  // tokenization cache, both keyed on the state.tm array via WeakMap and
+  // updated incrementally by tmAdd. This keeps segment switches O(candidates)
+  // instead of O(whole TM) — the difference between instant and laggy typing
+  // on a phone once the TM has thousands of units.
+
+  const _tokCache = new WeakMap();   // unit -> tokens
+  const _tmIndexes = new WeakMap();  // state.tm array -> {map, byKey, size}
+
+  function _unitToks(u) {
+    let toks = _tokCache.get(u);
+    if (!toks) { toks = tokenize(u.source); _tokCache.set(u, toks); }
+    return toks;
+  }
+
+  const _unitKey = (u) => `${u.s}\x00${u.t}\x00${u.source}\x00${u.target}`;
+
+  function _indexUnit(idx, u) {
+    for (const tok of new Set(_unitToks(u))) {
+      const key = `${u.s}:${u.t}:${tok}`;
+      let arr = idx.map.get(key);
+      if (!arr) idx.map.set(key, arr = []);
+      arr.push(u);
+    }
+    idx.byKey.set(_unitKey(u), u);
+  }
+
+  function _getIndex(state) {
+    let idx = _tmIndexes.get(state.tm);
+    if (!idx || idx.size !== state.tm.length) {
+      idx = { map: new Map(), byKey: new Map(), size: state.tm.length };
+      for (const u of state.tm) _indexUnit(idx, u);
+      _tmIndexes.set(state.tm, idx);
+    }
+    return idx;
+  }
 
   function tmAdd(state, s, t, source, target, origin) {
     source = normSpace(source); target = normSpace(target);
     if (!source || !target) return false;
     s = normLang(s); t = normLang(t);
-    const existing = state.tm.find(
-      (u) => u.s === s && u.t === t && u.source === source && u.target === target);
+    const idx = _getIndex(state);
+    const unit = { s, t, source, target, origin, use: 0 };
+    const existing = idx.byKey.get(_unitKey(unit));
     if (existing) { existing.use++; return false; }
-    state.tm.push({ s, t, source, target, origin, use: 0 });
+    state.tm.push(unit);
+    _indexUnit(idx, unit);
+    idx.size++;
     return true;
   }
 
@@ -321,13 +361,28 @@ const Engine = (() => {
     if (!plain) return [];
     const queryToks = tokenize(plain);
     const querySet = new Set(queryToks);
+    const idx = _getIndex(state);
+
+    // Collect candidates rarest-token-first, so stop-words ("the", "и", "de")
+    // whose posting lists span the whole TM don't flood the scoring loop. A
+    // real fuzzy match shares content words, which are in the rare lists.
+    const lists = [];
+    for (const tok of querySet) {
+      const arr = idx.map.get(`${s}:${t}:${tok}`);
+      if (arr) lists.push(arr);
+    }
+    lists.sort((a, b) => a.length - b.length);
+    const candidates = new Set();
+    for (const arr of lists) {
+      if (candidates.size >= 1500 && arr.length > state.tm.length * 0.2) break;
+      for (const u of arr) candidates.add(u);
+      if (candidates.size >= 4000) break;
+    }
+
     const results = [];
-    for (const u of state.tm) {
-      if (u.s !== s || u.t !== t) continue;
+    for (const u of candidates) {
       if (u.source === plain) { results.push({ ...u, score: 1 }); continue; }
-      // cheap prefilter: must share at least one token
-      const utoks = tokenize(u.source);
-      if (!utoks.some((w) => querySet.has(w))) continue;
+      const utoks = _unitToks(u);
       if (utoks.length > queryToks.length * 3 + 4 || queryToks.length > utoks.length * 3 + 4) continue;
       const score = tokenSimilarity(queryToks, utoks);
       if (score >= minScore) results.push({ ...u, score });
@@ -614,8 +669,12 @@ const Engine = (() => {
     return translatedAny ? out : null;
   }
 
-  function mtSuggest(state, s, t, text) {
-    const matches = tmLookup(state, s, t, text, 1, 0.6);
+  function mtSuggest(state, s, t, text, precomputed) {
+    // precomputed: optional tmLookup results for the same text, so callers
+    // that already fetched matches don't trigger a second lookup.
+    const matches = precomputed !== undefined
+      ? precomputed.filter((m) => m.score >= 0.6).slice(0, 1)
+      : tmLookup(state, s, t, text, 1, 0.6);
     if (matches.length && matches[0].percent >= 100) {
       return { text: matches[0].target, provider: "TM (exact)", percent: 100 };
     }

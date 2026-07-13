@@ -110,31 +110,35 @@ function openProject(id) {
     </div>`;
   }).join("") || `<div class="muted">Upload an XLIFF or plain-text file to start translating.</div>`;
 
-  // volume analysis
-  $("#analysis").innerHTML = "";
+  // Volume analysis is TM-lookup-heavy: run it after the view has painted.
+  $("#analysis").innerHTML = files.length
+    ? `<div class="muted" style="margin-top:10px">Analyzing…</div>` : "";
   if (files.length) {
-    const bands = { exact: 0, f75: 0, f50: 0, rep: 0, nw: 0 };
-    let words = 0;
-    const seen = new Set();
-    for (const f of files) {
-      for (const seg of fileSegments(f.id)) {
-        const plain = Engine.stripTags(seg.source);
-        const toks = Engine.tokenize(plain);
-        words += toks.length;
-        const key = toks.join(" ");
-        if (seen.has(key)) { bands.rep += toks.length; continue; }
-        seen.add(key);
-        const m = Engine.tmLookup(S, p.s, p.t, plain, 1, 0.5);
-        const pct = m.length ? m[0].percent : 0;
-        if (pct >= 100) bands.exact += toks.length;
-        else if (pct >= 75) bands.f75 += toks.length;
-        else if (pct >= 50) bands.f50 += toks.length;
-        else bands.nw += toks.length;
+    setTimeout(() => {
+      if (currentProject !== p) return;
+      const bands = { exact: 0, f75: 0, f50: 0, rep: 0, nw: 0 };
+      let words = 0;
+      const seen = new Set();
+      for (const f of files) {
+        for (const seg of fileSegments(f.id)) {
+          const plain = Engine.stripTags(seg.source);
+          const toks = Engine.tokenize(plain);
+          words += toks.length;
+          const key = toks.join(" ");
+          if (seen.has(key)) { bands.rep += toks.length; continue; }
+          seen.add(key);
+          const m = Engine.tmLookup(S, p.s, p.t, plain, 1, 0.5);
+          const pct = m.length ? m[0].percent : 0;
+          if (pct >= 100) bands.exact += toks.length;
+          else if (pct >= 75) bands.f75 += toks.length;
+          else if (pct >= 50) bands.f50 += toks.length;
+          else bands.nw += toks.length;
+        }
       }
-    }
-    $("#analysis").innerHTML = `<div class="muted" style="margin-top:10px">
-      Analysis: ${words} words — ${bands.exact} exact · ${bands.f75} fuzzy 75–99% ·
-      ${bands.f50} fuzzy 50–74% · ${bands.rep} repetitions · ${bands.nw} new</div>`;
+      $("#analysis").innerHTML = `<div class="muted" style="margin-top:10px">
+        Analysis: ${words} words — ${bands.exact} exact · ${bands.f75} fuzzy 75–99% ·
+        ${bands.f50} fuzzy 50–74% · ${bands.rep} repetitions · ${bands.nw} new</div>`;
+    }, 0);
   }
 }
 
@@ -150,10 +154,25 @@ function openEditor(fileId) {
   renderSegments();
 }
 
+let renderJob = 0;
+
 function renderSegments() {
   const segs = fileSegments(currentFile.id);
   updateProgress();
-  $("#segments").innerHTML = segs.map(segHtml).join("");
+  // Render the first screenful synchronously, the rest in idle chunks so
+  // large files (e.g. imported PDFs) don't block the UI.
+  const FIRST = 150, CHUNK = 300;
+  const job = ++renderJob;
+  const box = $("#segments");
+  box.innerHTML = segs.slice(0, FIRST).map(segHtml).join("");
+  let i = FIRST;
+  const appendChunk = () => {
+    if (job !== renderJob || i >= segs.length) return;
+    box.insertAdjacentHTML("beforeend", segs.slice(i, i + CHUNK).map(segHtml).join(""));
+    i += CHUNK;
+    requestAnimationFrame(appendChunk);
+  };
+  if (i < segs.length) requestAnimationFrame(appendChunk);
   $("#matches").innerHTML = `<div class="muted">Select a segment.</div>`;
   $("#qa-issues").innerHTML = "";
   activeSegId = null;
@@ -186,38 +205,44 @@ function activateSeg(id) {
   activeSegId = id;
   document.querySelectorAll(".seg.active").forEach((el) => el.classList.remove("active"));
   $(`#seg-${id}`)?.classList.add("active");
-  const seg = S.segments.find((x) => x.id === id);
-  const p = currentProject;
-  const plain = Engine.stripTags(seg.source);
+  // Defer suggestion lookup past the paint so focusing a segment (and the
+  // keyboard opening on mobile) never waits on TM work.
+  setTimeout(() => {
+    if (activeSegId !== id) return;
+    const seg = S.segments.find((x) => x.id === id);
+    const p = currentProject;
+    const plain = Engine.stripTags(seg.source);
 
-  let html = "";
-  const mt = Engine.mtSuggest(S, p.s, p.t, plain);
-  if (mt) {
-    html += `<div class="match"><span class="pct">${mt.percent}%</span>
-      <span class="muted">${esc(mt.provider)}</span>
-      <button class="apply" data-apply="${id}" data-text="${esc(mt.text)}">Apply</button>
-      <div>${esc(mt.text)}</div></div>`;
-  }
-  for (const t of Engine.tmLookup(S, p.s, p.t, plain, 4, 0.5)) {
-    html += `<div class="match"><span class="pct">${t.percent}%</span>
-      <span class="muted">TM · ${esc(t.origin)}</span>
-      <button class="apply" data-apply="${id}" data-text="${esc(t.target)}">Apply</button>
-      <div>${esc(t.target)}</div>
-      <div class="match-src">${renderText(t.source)}</div></div>`;
-  }
-  const terms = [];
-  for (const w of new Set(Engine.tokenize(plain))) {
-    const found = Engine.lexiconLookup(S, p.s, p.t, w);
-    if (found.length) terms.push({ word: w, translations: found.slice(0, 3).map(([x]) => x) });
-    if (terms.length >= 12) break;
-  }
-  if (terms.length) {
-    html += `<h3 style="margin-top:10px">Learned terms</h3>` + terms.map((t) =>
-      `<span class="term">${esc(t.word)} → ${esc(t.translations.join(", "))}</span>`).join("");
-  }
-  $("#matches").innerHTML = html ||
-    `<div class="muted">No suggestions yet — import a TMX or paired texts on the home screen.</div>`;
-  runSegQa(id, true);
+    let html = "";
+    const tmMatches = Engine.tmLookup(S, p.s, p.t, plain, 4, 0.5);
+    const mt = Engine.mtSuggest(S, p.s, p.t, plain, tmMatches);
+    if (mt) {
+      html += `<div class="match"><span class="pct">${mt.percent}%</span>
+        <span class="muted">${esc(mt.provider)}</span>
+        <button class="apply" data-apply="${id}" data-text="${esc(mt.text)}">Apply</button>
+        <div>${esc(mt.text)}</div></div>`;
+    }
+    for (const t of tmMatches) {
+      html += `<div class="match"><span class="pct">${t.percent}%</span>
+        <span class="muted">TM · ${esc(t.origin)}</span>
+        <button class="apply" data-apply="${id}" data-text="${esc(t.target)}">Apply</button>
+        <div>${esc(t.target)}</div>
+        <div class="match-src">${renderText(t.source)}</div></div>`;
+    }
+    const terms = [];
+    for (const w of new Set(Engine.tokenize(plain))) {
+      const found = Engine.lexiconLookup(S, p.s, p.t, w);
+      if (found.length) terms.push({ word: w, translations: found.slice(0, 3).map(([x]) => x) });
+      if (terms.length >= 12) break;
+    }
+    if (terms.length) {
+      html += `<h3 style="margin-top:10px">Learned terms</h3>` + terms.map((t) =>
+        `<span class="term">${esc(t.word)} → ${esc(t.translations.join(", "))}</span>`).join("");
+    }
+    $("#matches").innerHTML = html ||
+      `<div class="muted">No suggestions yet — import a TMX or paired texts on the home screen.</div>`;
+    runSegQa(id, true);
+  }, 0);
 }
 
 function runSegQa(id, sidebar) {
@@ -266,7 +291,7 @@ document.addEventListener("click", (ev) => {
     S.projects = S.projects.filter((p) => p.id !== pid);
     S.files = S.files.filter((f) => f.projectId !== pid);
     S.segments = S.segments.filter((x) => !fids.includes(x.fileId));
-    Store.save();
+    Store.saveOriginals();
     return showHome();
   }
   if (t.dataset.openFile) return openEditor(+t.dataset.openFile);
@@ -449,7 +474,7 @@ $("#upload-form").onsubmit = async (ev) => {
     S.segments.push({ id: Store.nextId(), fileId: fid, seq: i, unitId: u.unitId,
       source: u.source, target: u.target, state: u.target ? u.state : "new" });
   });
-  Store.save();
+  Store.saveOriginals();
   toast(`Imported ${units.length} segment(s)`);
   openProject(p.id);
 };
